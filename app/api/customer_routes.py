@@ -4,7 +4,7 @@ from app.db.session import SessionLocal
 from app.services import customer_service
 from app.schemas.customer_schema import CustomerCreate, CustomerUpdate
 
-router = APIRouter(prefix="/customer", tags=["Customer"])
+router = APIRouter(prefix="/api", tags=["Customer"])
 
 
 def get_db():
@@ -16,7 +16,7 @@ def get_db():
 
 
 # CREATE CUSTOMER
-@router.post("/create", status_code=status.HTTP_201_CREATED)
+@router.post("/customer/create", status_code=status.HTTP_201_CREATED)
 def create_customer(data: CustomerCreate, db: Session = Depends(get_db)):
     return customer_service.create_customer(db, data)
 
@@ -35,7 +35,9 @@ def get_customer(customer_id: str, db: Session = Depends(get_db)):
 
 # UPDATE
 @router.put("/{customer_id}")
-def update_customer(customer_id: str, data: CustomerUpdate, db: Session = Depends(get_db)):
+def update_customer(
+    customer_id: str, data: CustomerUpdate, db: Session = Depends(get_db)
+):
     return customer_service.update_customer(db, customer_id, data)
 
 
