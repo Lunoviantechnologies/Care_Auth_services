@@ -28,14 +28,25 @@ def login_admin(data: dict, db: Session = Depends(get_db)):
     return {"data": admin_login(db, data["email"], data["password"])}
 
 
-#  WORKER LOGIN (PASSWORD)
+
+# WORKER LOGIN (PASSWORD)
 @router.post("/worker/login")
 def login_worker(data: dict, db: Session = Depends(get_db)):
+
     if not data.get("phone") or not data.get("password"):
         raise HTTPException(400, "Phone and password required")
 
-    return {"data": worker_login(db, data["phone"], data["password"])}
+    if not data.get("device_id"):
+        raise HTTPException(400, "device_id required")
 
+    return {
+        "data": worker_login(
+            db,
+            data["phone"],
+            data["password"],
+            data["device_id"]
+        )
+    }
 
 #  CUSTOMER LOGIN
 @router.post("/customer/login")
@@ -47,14 +58,22 @@ def login_customer(data: dict, db: Session = Depends(get_db)):
 
 
 
-#firebase login for worker
 @router.post("/worker/firebase-login")
 def worker_login(data: dict, db: Session = Depends(get_db)):
 
     if not data.get("token"):
         raise HTTPException(400, "Firebase token required")
 
-    return {"data": firebase_worker_login(db, data["token"])}
+    if not data.get("device_id"):
+        raise HTTPException(400, "device_id required")
+
+    return {
+        "data": firebase_worker_login(
+            db,
+            data["token"],
+            data["device_id"]
+        )
+    }
 
 #firebase login for customer
 @router.post("/customer/firebase-login")

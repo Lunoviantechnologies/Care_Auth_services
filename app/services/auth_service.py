@@ -37,8 +37,9 @@ def admin_login(db: Session, email, password):
     return generate_tokens(user.id, "admin")
 
 
-# 👷 WORKER LOGIN (PASSWORD)
-def worker_login(db: Session, phone: str, password: str):
+# WORKER LOGIN (PASSWORD + DEVICE CHECK)
+def worker_login(db: Session, phone: str, password: str, device_id: str):
+
     worker = db.query(Worker).filter(Worker.phone == phone).first()
 
     if not worker:
@@ -49,6 +50,17 @@ def worker_login(db: Session, phone: str, password: str):
 
     if not worker.is_admin_approved:
         raise HTTPException(403, "Wait for admin approval")
+
+    # 🔹 SINGLE DEVICE LOGIN LOGIC
+    if worker.device_id and worker.device_id != device_id:
+        # new login from another device → replace device
+        worker.device_id = device_id
+    else:
+        worker.device_id = device_id
+
+    worker.is_logged_in = True
+
+    db.commit()
 
     return generate_tokens(worker.id, "worker")
 
@@ -66,10 +78,8 @@ def customer_login(db: Session, email, password):
     return generate_tokens(user.id, "customer")
 
 
-# firebase login for worker
-
-
-def firebase_worker_login(db, token):
+# FIREBASE LOGIN WORKER
+def firebase_worker_login(db: Session, token: str, device_id: str):
 
     phone = verify_firebase_token(token)
 
@@ -81,8 +91,17 @@ def firebase_worker_login(db, token):
     if not worker.is_admin_approved:
         raise HTTPException(403, "Wait for admin approval")
 
-    return generate_tokens(worker.id, "worker")
+    # 🔹 DEVICE CHECK
+    if worker.device_id and worker.device_id != device_id:
+        worker.device_id = device_id
+    else:
+        worker.device_id = device_id
 
+    worker.is_logged_in = True
+
+    db.commit()
+
+    return generate_tokens(worker.id, "worker")
 
 # firebase login for customer
 def firebase_customer_login(db, token):
