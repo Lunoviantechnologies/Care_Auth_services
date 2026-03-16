@@ -2,15 +2,23 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 from app.core.config import settings
 
-# ✅ Create engine
+# Create engine
 engine = create_engine(settings.DATABASE_URL)
 
-# ✅ Create session
+# Create session
 SessionLocal = sessionmaker(
     autocommit=False,
     autoflush=False,
     bind=engine
 )
 
-# ✅ THIS LINE IS MANDATORY (YOU ARE MISSING THIS)
+# Base model
 Base = declarative_base()
+
+# ✅ DATABASE DEPENDENCY FOR FASTAPI
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()

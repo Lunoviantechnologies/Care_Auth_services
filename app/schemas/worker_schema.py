@@ -34,3 +34,21 @@ class AddressUpdate(BaseModel):
     city: str
     state: str
     pincode: str
+
+    # 🔹 FORGOT PASSWORD
+class WorkerForgotPasswordRequest(BaseModel):
+    email: str
+
+
+# 🔹 VERIFY OTP
+class WorkerVerifyOTPRequest(BaseModel):
+    email: str
+    otp: str
+
+
+# 🔹 RESET PASSWORD
+class WorkerResetPasswordRequest(BaseModel):
+    email: str
+    otp: str
+    new_password: str
+    confirm_password: str

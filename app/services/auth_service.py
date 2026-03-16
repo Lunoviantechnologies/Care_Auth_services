@@ -5,13 +5,12 @@ from app.db.models.admin_model import Admin
 from app.db.models.worker_model import Worker
 from app.db.models.customer_model import Customer
 
-from app.core.security import (
-    verify_password,
-    create_access_token,
-    create_refresh_token
-)
+from app.services.firebase_service import verify_firebase_token
 
-from app.services.otp_service import verify_otp
+from app.core.security import verify_password, create_access_token, create_refresh_token
+from app.services.firebase_service import verify_firebase_token
+from app.db.models.customer_model import Customer
+from fastapi import HTTPException
 
 
 # 🔐 TOKEN GENERATOR
@@ -21,7 +20,7 @@ def generate_tokens(user_id: int, role: str):
         "refresh_token": create_refresh_token(user_id, role),
         "token_type": "bearer",
         "user_id": user_id,
-        "role": role
+        "role": role,
     }
 
 
@@ -67,11 +66,12 @@ def customer_login(db: Session, email, password):
     return generate_tokens(user.id, "customer")
 
 
-# 🔢 OTP LOGIN (WORKER)
-def otp_login(db: Session, phone: str, otp: str):
+# firebase login for worker
 
-    # ✅ VERIFY OTP
-    verify_otp(phone, otp)
+
+def firebase_worker_login(db, token):
+
+    phone = verify_firebase_token(token)
 
     worker = db.query(Worker).filter(Worker.phone == phone).first()
 
@@ -81,7 +81,17 @@ def otp_login(db: Session, phone: str, otp: str):
     if not worker.is_admin_approved:
         raise HTTPException(403, "Wait for admin approval")
 
-    worker.phone_verified = True
-    db.commit()
-
     return generate_tokens(worker.id, "worker")
+
+
+# firebase login for customer
+def firebase_customer_login(db, token):
+
+    phone = verify_firebase_token(token)
+
+    customer = db.query(Customer).filter(Customer.phone == phone).first()
+
+    if not customer:
+        raise HTTPException(404, "Customer not found")
+
+    return generate_tokens(customer.id, "customer")

@@ -5,6 +5,12 @@ from sqlalchemy.orm import Session
 from fastapi import HTTPException, UploadFile
 from app.db.models.worker_model import Worker
 from app.core.security import hash_password, verify_password, create_access_token
+import random
+from datetime import datetime, timedelta
+from app.db.models.otp_model import OTP
+from app.core.email_service import send_email_otp
+from sqlalchemy import or_, asc, desc
+
 
 BASE_URL = "http://localhost:8000"
 
@@ -29,7 +35,9 @@ def format_worker(worker):
         "phone": worker.phone,
         "email": worker.email,
         "status": worker.status,
-        "profile_image": f"{BASE_URL}{worker.profile_image}" if worker.profile_image else None
+        "profile_image": (
+            f"{BASE_URL}{worker.profile_image}" if worker.profile_image else None
+        ),
     }
 
 
@@ -65,12 +73,9 @@ def login_worker(db, data):
     if not worker.is_admin_approved:
         raise HTTPException(403, "Wait for admin approval")
 
-    token = create_access_token({"sub": str(worker.id), "role": "worker"})
+    token = create_access_token({"sub": str(worker.id)}, "worker")
 
-    return {
-        "access_token": token,
-        "worker": format_worker(worker)
-    }
+    return {"access_token": token, "worker": format_worker(worker)}
 
 
 # 🔹 PROFILE UPLOAD
@@ -172,6 +177,7 @@ def approve_worker(db, worker_id):
 
     return {"message": "Approved"}
 
+
 # 🔹 REJECT
 def reject_worker(db, worker_id):
     worker = get_worker_or_404(db, worker_id)
@@ -183,15 +189,56 @@ def reject_worker(db, worker_id):
 
     return {"message": "Rejected"}
 
+
 # 🔹 LIST
-def list_workers(db):
-    workers = db.query(Worker).all()
-    return [format_worker(w) for w in workers]
+def list_workers(
+    db: Session,
+    page: int,
+    size: int,
+    search: str = None,
+    sort_by: str = "id",
+    sort_order: str = "desc",
+):
+
+    query = db.query(Worker)
+
+    # 🔹 FILTER (Search)
+    if search:
+        query = query.filter(
+            or_(
+                Worker.full_name.ilike(f"%{search}%"),
+                Worker.email.ilike(f"%{search}%"),
+                Worker.phone.ilike(f"%{search}%"),
+            )
+        )
+
+    # 🔹 SORTING
+    sort_column = getattr(Worker, sort_by, Worker.id)
+
+    if sort_order.lower() == "asc":
+        query = query.order_by(asc(sort_column))
+    else:
+        query = query.order_by(desc(sort_column))
+
+    # 🔹 TOTAL COUNT
+    total = query.count()
+
+    # 🔹 PAGINATION
+    workers = query.offset((page - 1) * size).limit(size).all()
+
+    return {
+        "page": page,
+        "size": size,
+        "total": total,
+        "data": [format_worker(w) for w in workers],
+    }
+
 
 # 🔹 DETAILS
 def get_worker_details(db, worker_id):
     worker = get_worker_or_404(db, worker_id)
     return format_worker(worker)
+
 
 # 🔹 DELETE
 def delete_worker(db, worker_id):
@@ -200,12 +247,14 @@ def delete_worker(db, worker_id):
     db.commit()
     return {"message": "Worker deleted"}
 
+
 # 🔹 LOGOUT
 def logout_worker(db, worker_id):
     worker = get_worker_or_404(db, worker_id)
     worker.is_logged_in = False
     db.commit()
     return {"message": "Logged out"}
+
 
 # 🔹 UPDATE WORKER
 def update_worker(db, worker_id, data):
@@ -217,11 +266,82 @@ def update_worker(db, worker_id, data):
     db.commit()
     return {"message": "Worker updated"}
 
-        # 🔹 UPDATE DEVICE ID
+    # 🔹 UPDATE DEVICE ID
+
+
 def update_device_id(db, worker_id, data):
     worker = get_worker_or_404(db, worker_id)
     worker.device_id = data.device_id
     db.commit()
     return {"message": "Device ID updated"}
 
-   
+
+# 🔹 SEND OTP
+def send_worker_otp(db: Session, email: str):
+
+    worker = db.query(Worker).filter(Worker.email == email).first()
+
+    if not worker:
+        raise HTTPException(404, "Worker not found")
+
+    otp_code = str(random.randint(100000, 999999))
+
+    otp_record = OTP(
+        email=email, otp=otp_code, expires_at=datetime.utcnow() + timedelta(minutes=5)
+    )
+
+    db.add(otp_record)
+    db.commit()
+
+    send_email_otp(email, otp_code)
+
+    return {"message": "OTP sent to email"}
+
+
+# 🔹 VERIFY OTP
+def verify_worker_otp(db: Session, email: str, otp: str):
+
+    otp_record = (
+        db.query(OTP)
+        .filter(OTP.email == email, OTP.otp == otp)
+        .order_by(OTP.id.desc())
+        .first()
+    )
+
+    if not otp_record:
+        raise HTTPException(400, "Invalid OTP")
+
+    if otp_record.expires_at < datetime.utcnow():
+        raise HTTPException(400, "OTP expired")
+
+    return {"message": "OTP verified"}
+
+
+# 🔹 RESET PASSWORD
+def reset_worker_password(
+    db: Session, email: str, otp: str, new_password: str, confirm_password: str
+):
+
+    if new_password != confirm_password:
+        raise HTTPException(400, "Passwords do not match")
+
+    otp_record = (
+        db.query(OTP)
+        .filter(OTP.email == email, OTP.otp == otp)
+        .order_by(OTP.id.desc())
+        .first()
+    )
+
+    if not otp_record:
+        raise HTTPException(400, "Invalid OTP")
+
+    worker = db.query(Worker).filter(Worker.email == email).first()
+
+    if not worker:
+        raise HTTPException(404, "Worker not found")
+
+    worker.password = hash_password(new_password)
+
+    db.commit()
+
+    return {"message": "Password reset successful"}

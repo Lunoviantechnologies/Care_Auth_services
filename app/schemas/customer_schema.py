@@ -18,3 +18,23 @@ class CustomerUpdate(BaseModel):
     address: Optional[str]
     city: Optional[str]
     isVerified: Optional[bool]
+
+    # FORGOT PASSWORD REQUEST
+
+
+class CustomerForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+# VERIFY OTP
+class CustomerVerifyOTPRequest(BaseModel):
+    email: EmailStr
+    otp: str
+
+
+# RESET PASSWORD
+class CustomerResetPasswordRequest(BaseModel):
+    email: EmailStr
+    otp: str
+    new_password: str
+    confirm_password: str

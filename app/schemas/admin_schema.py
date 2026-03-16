@@ -31,3 +31,21 @@ class AdminResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+        # 🔹 Forgot Password - Send OTP
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+# 🔹 Verify OTP
+class VerifyOTPRequest(BaseModel):
+    email: EmailStr
+    otp: str
+
+
+# 🔹 Reset Password
+class ResetPasswordRequest(BaseModel):
+    email: EmailStr
+    otp: str
+    new_password: str
+    confirm_password: str
