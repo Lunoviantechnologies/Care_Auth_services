@@ -11,8 +11,25 @@ EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
 
 def send_email_otp(email, otp):
 
-    subject = "Password Reset OTP"
-    body = f"Your OTP for password reset is: {otp}"
+    subject = "Password Reset Verification Code"
+
+    body = f"""
+Dear User,
+
+We received a request to reset the password for your account.
+
+Your One-Time Password (OTP) for password reset is:
+
+OTP: {otp}
+
+This OTP is valid for a limited time. Please do not share this code with anyone for security reasons.
+
+If you did not request a password reset, please ignore this email or contact our support team immediately.
+
+Best Regards,  
+Support Team  
+Baby_Care team
+"""
 
     msg = MIMEText(body)
     msg["Subject"] = subject
