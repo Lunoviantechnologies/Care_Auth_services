@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Boolean, DateTime, Integer
+from sqlalchemy import Column, String, Boolean, DateTime, Integer, Float
 from app.db.session import Base
 from datetime import datetime
 
@@ -16,5 +16,7 @@ class Customer(Base):
     city = Column(String, nullable=True)
     device_id = Column(String, nullable=True)
     isVerified = Column(Boolean, default=False)
-    isActive = Column(Boolean, default=True)   # ✅ added (recommended)
+    isActive = Column(Boolean, default=True)
     createdAt = Column(DateTime, default=datetime.utcnow)
+    latitude = Column(Float, nullable=True)
+    longitude = Column(Float, nullable=True)

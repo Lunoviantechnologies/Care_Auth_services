@@ -11,10 +11,7 @@ from app.api import auth_routes, admin_routes, worker_routes, customer_routes
 # ✅ Create tables
 Base.metadata.create_all(bind=engine)
 
-app = FastAPI(
-    title=settings.APP_NAME,
-    debug=settings.DEBUG
-)
+app = FastAPI(title=settings.APP_NAME, debug=settings.DEBUG)
 
 # ✅ CORS
 app.add_middleware(
