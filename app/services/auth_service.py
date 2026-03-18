@@ -5,15 +5,11 @@ from app.db.models.admin_model import Admin
 from app.db.models.worker_model import Worker
 from app.db.models.customer_model import Customer
 
-from app.services.firebase_service import verify_firebase_token
-
 from app.core.security import verify_password, create_access_token, create_refresh_token
 from app.services.firebase_service import verify_firebase_token
-from app.db.models.customer_model import Customer
-from fastapi import HTTPException
 
 
-# 🔐 TOKEN GENERATOR
+# ---------------- TOKEN GENERATOR ----------------
 def generate_tokens(user_id: int, role: str):
     return {
         "access_token": create_access_token(user_id, role),
@@ -24,20 +20,21 @@ def generate_tokens(user_id: int, role: str):
     }
 
 
-# 🔐 ADMIN LOGIN
-def admin_login(db: Session, email, password):
-    user = db.query(Admin).filter(Admin.email == email).first()
+# ---------------- ADMIN LOGIN ----------------
+def admin_login(db: Session, email: str, password: str):
 
-    if not user:
+    admin = db.query(Admin).filter(Admin.email == email).first()
+
+    if not admin:
         raise HTTPException(404, "Admin not found")
 
-    if not verify_password(password, user.password):
+    if not verify_password(password, admin.password):
         raise HTTPException(401, "Invalid credentials")
 
-    return generate_tokens(user.id, "admin")
+    return generate_tokens(admin.id, "admin")
 
 
-# WORKER LOGIN (PASSWORD + DEVICE CHECK)
+# ---------------- WORKER LOGIN ----------------
 def worker_login(db: Session, phone: str, password: str, device_id: str):
 
     worker = db.query(Worker).filter(Worker.phone == phone).first()
@@ -46,18 +43,13 @@ def worker_login(db: Session, phone: str, password: str, device_id: str):
         raise HTTPException(404, "Worker not found")
 
     if not verify_password(password, worker.password):
-        raise HTTPException(400, "Invalid credentials")
+        raise HTTPException(401, "Invalid credentials")
 
     if not worker.is_admin_approved:
         raise HTTPException(403, "Wait for admin approval")
 
-    # 🔹 SINGLE DEVICE LOGIN LOGIC
-    if worker.device_id and worker.device_id != device_id:
-        # new login from another device → replace device
-        worker.device_id = device_id
-    else:
-        worker.device_id = device_id
-
+    # SINGLE DEVICE LOGIN
+    worker.device_id = device_id
     worker.is_logged_in = True
 
     db.commit()
@@ -65,20 +57,37 @@ def worker_login(db: Session, phone: str, password: str, device_id: str):
     return generate_tokens(worker.id, "worker")
 
 
-# 👤 CUSTOMER LOGIN
-def customer_login(db: Session, email, password):
-    user = db.query(Customer).filter(Customer.email == email).first()
+# ---------------- CUSTOMER LOGIN ----------------
+# CUSTOMER LOGIN SERVICE
+def customer_login(db: Session, phone: str, password: str):
 
-    if not user:
-        raise HTTPException(404, "Customer not found")
+    customer = db.query(Customer).filter(Customer.phone == phone).first()
 
-    if not verify_password(password, user.password):
-        raise HTTPException(401, "Invalid credentials")
+    # Customer not found
+    if not customer:
+        raise HTTPException(
+            status_code=404,
+            detail="Customer with this phone number not found"
+        )
 
-    return generate_tokens(user.id, "customer")
+    # Password check
+    if not verify_password(password, customer.password):
+        raise HTTPException(
+            status_code=401,
+            detail="Incorrect password"
+        )
+
+    # Inactive account
+    if not customer.isActive:
+        raise HTTPException(
+            status_code=403,
+            detail="Customer account is inactive"
+        )
+
+    return generate_tokens(customer.id, "customer")
 
 
-# FIREBASE LOGIN WORKER
+# ---------------- WORKER FIREBASE LOGIN ----------------
 def firebase_worker_login(db: Session, token: str, device_id: str):
 
     phone = verify_firebase_token(token)
@@ -91,20 +100,16 @@ def firebase_worker_login(db: Session, token: str, device_id: str):
     if not worker.is_admin_approved:
         raise HTTPException(403, "Wait for admin approval")
 
-    # 🔹 DEVICE CHECK
-    if worker.device_id and worker.device_id != device_id:
-        worker.device_id = device_id
-    else:
-        worker.device_id = device_id
-
+    worker.device_id = device_id
     worker.is_logged_in = True
 
     db.commit()
 
     return generate_tokens(worker.id, "worker")
 
-# firebase login for customer
-def firebase_customer_login(db, token):
+
+# ---------------- CUSTOMER FIREBASE LOGIN ----------------
+def firebase_customer_login(db: Session, token: str):
 
     phone = verify_firebase_token(token)
 

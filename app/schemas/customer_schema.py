@@ -19,7 +19,7 @@ class CustomerCreate(BaseModel):
 class CustomerLogin(BaseModel):
     phone: str
     password: str
-    device_id: str
+ #   device_id: str
 
 
 # ---------------- UPDATE CUSTOMER ---------------- #

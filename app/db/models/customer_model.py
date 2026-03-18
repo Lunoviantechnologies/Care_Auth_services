@@ -14,7 +14,7 @@ class Customer(Base):
     password = Column(String, nullable=False)
     address = Column(String, nullable=True)
     city = Column(String, nullable=True)
-    device_id = Column(String, nullable=True)
+   # device_id = Column(String, nullable=True)
     isVerified = Column(Boolean, default=False)
     isActive = Column(Boolean, default=True)
     createdAt = Column(DateTime, default=datetime.utcnow)

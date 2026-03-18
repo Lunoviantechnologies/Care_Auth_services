@@ -8,12 +8,12 @@ from app.core.config import settings
 from app.db.models import admin_model, customer_model, worker_model
 from app.api import auth_routes, admin_routes, worker_routes, customer_routes
 
-# ✅ Create tables
+# Create tables
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title=settings.APP_NAME, debug=settings.DEBUG)
 
-# ✅ CORS
+# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -22,7 +22,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 🔥 IMPORTANT: Serve uploaded images
+# IMPORTANT: Serve uploaded images
 app.mount("/uploads", StaticFiles(directory="app/uploads"), name="uploads")
 
 
@@ -31,7 +31,7 @@ def root():
     return {"message": "API is running 🚀"}
 
 
-# ✅ ROUTES
+#  ROUTES
 app.include_router(auth_routes.router)
 app.include_router(admin_routes.router)
 app.include_router(worker_routes.router)
