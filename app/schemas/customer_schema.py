@@ -1,28 +1,37 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from typing import Optional
 from datetime import datetime
 
 
-# ---------------- CREATE CUSTOMER ---------------- #
+# ---------------- BASE ---------------- #
 
-class CustomerCreate(BaseModel):
-    name: str
+
+class CustomerBase(BaseModel):
+    name: str = Field(..., min_length=2, max_length=100)
     email: EmailStr
-    phone: str
-    password: str
+    phone: str = Field(..., min_length=10, max_length=15)
     address: Optional[str] = None
     city: Optional[str] = None
+    profile_image: Optional[str] = None
 
 
-# ---------------- CUSTOMER LOGIN ---------------- #
+# ---------------- CREATE ---------------- #
+
+
+class CustomerCreate(CustomerBase):
+    password: str = Field(..., min_length=6)
+
+
+# ---------------- LOGIN ---------------- #
+
 
 class CustomerLogin(BaseModel):
     phone: str
     password: str
- #   device_id: str
 
 
-# ---------------- UPDATE CUSTOMER ---------------- #
+# ---------------- UPDATE ---------------- #
+
 
 class CustomerUpdate(BaseModel):
     name: Optional[str] = None
@@ -30,10 +39,12 @@ class CustomerUpdate(BaseModel):
     phone: Optional[str] = None
     address: Optional[str] = None
     city: Optional[str] = None
+    profile_image: Optional[str] = None
     isVerified: Optional[bool] = None
 
 
-# ---------------- LOCATION UPDATE ---------------- #
+# ---------------- LOCATION ---------------- #
+
 
 class CustomerLocationUpdate(BaseModel):
     latitude: float
@@ -42,11 +53,13 @@ class CustomerLocationUpdate(BaseModel):
 
 # ---------------- FORGOT PASSWORD ---------------- #
 
+
 class CustomerForgotPasswordRequest(BaseModel):
     email: EmailStr
 
 
 # ---------------- VERIFY OTP ---------------- #
+
 
 class CustomerVerifyOTPRequest(BaseModel):
     email: EmailStr
@@ -55,6 +68,7 @@ class CustomerVerifyOTPRequest(BaseModel):
 
 # ---------------- RESET PASSWORD ---------------- #
 
+
 class CustomerResetPasswordRequest(BaseModel):
     email: EmailStr
     otp: str
@@ -62,15 +76,11 @@ class CustomerResetPasswordRequest(BaseModel):
     confirm_password: str
 
 
-# ---------------- RESPONSE SCHEMA ---------------- #
+# ---------------- RESPONSE ---------------- #
 
-class CustomerResponse(BaseModel):
+
+class CustomerResponse(CustomerBase):
     id: int
-    name: str
-    email: EmailStr
-    phone: str
-    address: Optional[str]
-    city: Optional[str]
     isVerified: bool
     isActive: bool
     latitude: Optional[float]

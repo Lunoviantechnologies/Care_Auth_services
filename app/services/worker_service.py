@@ -10,6 +10,21 @@ from datetime import datetime, timedelta
 from app.db.models.otp_model import OTP
 from app.core.email_service import send_email_otp
 from sqlalchemy import or_, asc, desc
+import os
+import shutil
+import uuid
+import requests
+import random
+from datetime import datetime, timedelta
+
+from sqlalchemy.orm import Session
+from sqlalchemy import or_, asc, desc
+from fastapi import HTTPException, UploadFile
+
+from app.db.models.worker_model import Worker
+from app.db.models.otp_model import OTP
+from app.core.security import hash_password, verify_password, create_access_token
+from app.core.email_service import send_email_otp
 
 
 BASE_URL = "http://localhost:8000"
@@ -20,6 +35,13 @@ AADHAR_DIR = "app/uploads/aadhar"
 os.makedirs(PROFILE_DIR, exist_ok=True)
 os.makedirs(AADHAR_DIR, exist_ok=True)
 
+# ================= AADHAAR CONFIG ================= #
+SUREPASS_API_KEY = os.getenv("SUREPASS_API_KEY")
+
+AADHAAR_HEADERS = {
+    "Authorization": f"Bearer {SUREPASS_API_KEY}",
+    "Content-Type": "application/json"
+}
 
 def get_worker_or_404(db, worker_id):
     worker = db.query(Worker).filter(Worker.id == worker_id).first()
@@ -193,8 +215,8 @@ def reject_worker(db, worker_id):
 # 🔹 LIST
 def list_workers(
     db: Session,
-    page: int,
-    size: int,
+    page: 0,
+    size: 10,
     search: str = None,
     sort_by: str = "id",
     sort_order: str = "desc",
@@ -345,3 +367,60 @@ def reset_worker_password(
     db.commit()
 
     return {"message": "Password reset successful"}
+
+
+# ================= AADHAAR OTP ================= #
+
+def generate_aadhaar_otp(db: Session, worker_id: int, aadhaar: str):
+    worker = get_worker_or_404(db, worker_id)
+
+    if len(aadhaar) != 12 or not aadhaar.isdigit():
+        raise HTTPException(400, "Invalid Aadhaar")
+
+    response = requests.post(
+        "https://api.surepass.io/api/v1/aadhaar-v2/generate-otp",
+        json={"id_number": aadhaar},
+        headers=AADHAAR_HEADERS,
+        timeout=10
+    )
+
+    data = response.json()
+
+    if response.status_code != 200:
+        raise HTTPException(400, data)
+
+    worker.aadhaar_client_id = data["data"]["client_id"]
+    db.commit()
+
+    return {"message": "OTP sent"}
+
+
+def verify_aadhaar_otp(db: Session, worker_id: int, otp: str, aadhaar: str):
+    worker = get_worker_or_404(db, worker_id)
+
+    if not worker.aadhaar_client_id:
+        raise HTTPException(400, "Generate OTP first")
+
+    response = requests.post(
+        "https://api.surepass.io/api/v1/aadhaar-v2/submit-otp",
+        json={
+            "client_id": worker.aadhaar_client_id,
+            "otp": otp
+        },
+        headers=AADHAAR_HEADERS,
+        timeout=10
+    )
+
+    data = response.json()
+
+    if response.status_code != 200:
+        raise HTTPException(400, data)
+
+    worker.aadhar_number = aadhaar[-4:]
+    worker.is_kyc_verified = True
+    worker.aadhaar_client_id = None
+
+    db.commit()
+
+    return {"message": "Aadhaar verified"}
+

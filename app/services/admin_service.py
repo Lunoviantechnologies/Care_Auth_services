@@ -95,9 +95,7 @@ def delete(db: Session, id: str):
         raise HTTPException(status_code=500, detail=f"Admin deletion failed: {str(e)}")
 
 
-# -------------------------
-# FORGOT PASSWORD SERVICES
-# -------------------------
+
 
 # SEND OTP
 def send_otp(db: Session, email: str):

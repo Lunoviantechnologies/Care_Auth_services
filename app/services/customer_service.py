@@ -1,3 +1,4 @@
+import os
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 from app.db.models.customer_model import Customer
@@ -11,6 +12,8 @@ from sqlalchemy.orm import Session
 from fastapi import HTTPException
 from app.db.models.customer_model import Customer
 
+PROFILE_DIR = "app/uploads/profile"
+os.makedirs(PROFILE_DIR, exist_ok=True)
 
 # CREATE CUSTOMER
 def create_customer(db: Session, data):
@@ -51,7 +54,7 @@ def create_customer(db: Session, data):
 # GET ALL CUSTOMERS
 def get_all_customers(
     db: Session,
-    page: int = 1,
+    page: int = 0,
     size: int = 10,
     sort_by: str = "id",
     order: str = "asc",
@@ -103,28 +106,41 @@ def get_customer_by_id(db: Session, customer_id: str):
     return customer
 
 
-# UPDATE CUSTOMER
-def update_customer(db: Session, customer_id: str, data):
+def update_customer(
+    db: Session,
+    customer_id: int,
+    name=None,
+    email=None,
+    phone=None,
+    address=None,
+    city=None,
+    isVerified=None,
+    profile_image=None
+):
     customer = get_customer_by_id(db, customer_id)
 
     try:
-        if data.name is not None:
-            customer.name = data.name
+        if name is not None:
+            customer.name = name
 
-        if data.email is not None:
-            customer.email = data.email
+        if email is not None:
+            customer.email = email
 
-        if data.phone is not None:
-            customer.phone = data.phone
+        if phone is not None:
+            customer.phone = phone
 
-        if data.address is not None:
-            customer.address = data.address
+        if address is not None:
+            customer.address = address
 
-        if data.city is not None:
-            customer.city = data.city
+        if city is not None:
+            customer.city = city
 
-        if data.isVerified is not None:
-            customer.isVerified = data.isVerified
+        if isVerified is not None:
+            customer.isVerified = isVerified
+
+        # ✅ IMAGE UPDATE
+        if profile_image is not None:
+            customer.profile_image = profile_image
 
         db.commit()
         db.refresh(customer)
@@ -134,7 +150,6 @@ def update_customer(db: Session, customer_id: str, data):
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
-
 
 # DELETE CUSTOMER
 def delete_customer(db: Session, customer_id: str):

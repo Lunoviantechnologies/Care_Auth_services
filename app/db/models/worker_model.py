@@ -102,3 +102,6 @@ class Worker(Base):
     is_logged_in = Column(Boolean, default=False)
 
     created_at = Column(DateTime, default=datetime.utcnow)
+    # ONLY CHANGE: added aadhaar_client_id
+
+    aadhaar_client_id = Column(String, nullable=True)  # NEW FIELD

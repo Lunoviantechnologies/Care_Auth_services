@@ -12,7 +12,7 @@ from app.services.auth_service import (
     firebase_customer_login
 )
 
-router = APIRouter(prefix="/auth")
+router = APIRouter(prefix="/api")
 
 
 # DB SESSION

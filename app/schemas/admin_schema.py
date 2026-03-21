@@ -3,7 +3,7 @@ from typing import Optional
 from datetime import datetime
 
 
-# 🔹 Create Admin
+#  Create Admin
 class AdminCreate(BaseModel):
     name: str
     email: EmailStr
@@ -11,7 +11,7 @@ class AdminCreate(BaseModel):
     role: str  # SUPER_ADMIN / SUB_ADMIN
 
 
-# 🔹 Update Admin
+#  Update Admin
 class AdminUpdate(BaseModel):
     name: Optional[str] = None
     email: Optional[EmailStr] = None
@@ -19,7 +19,7 @@ class AdminUpdate(BaseModel):
     isActive: Optional[bool] = None
 
 
-# 🔹 Response Schema
+#  Response Schema
 class AdminResponse(BaseModel):
     id: int
     name: str
@@ -27,23 +27,23 @@ class AdminResponse(BaseModel):
     role: str
     isActive: bool
     createdAt: datetime
-    device_id: Optional[str] = None   # ✅ added (matches model)
+    device_id: Optional[str] = None   
 
     class Config:
         from_attributes = True
 
-        # 🔹 Forgot Password - Send OTP
+        #  Forgot Password - Send OTP
 class ForgotPasswordRequest(BaseModel):
     email: EmailStr
 
 
-# 🔹 Verify OTP
+#  Verify OTP
 class VerifyOTPRequest(BaseModel):
     email: EmailStr
     otp: str
 
 
-# 🔹 Reset Password
+#  Reset Password
 class ResetPasswordRequest(BaseModel):
     email: EmailStr
     otp: str
