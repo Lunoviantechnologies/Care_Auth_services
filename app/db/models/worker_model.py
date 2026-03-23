@@ -4,23 +4,22 @@ from datetime import datetime
 import enum
 
 
-# Worker Status Enum
-class WorkerStatus(enum.Enum):
+# ---------------- ENUMS ---------------- #
+
+class WorkerStatusEnum(enum.Enum):
     PENDING = "pending"
     APPROVED = "approved"
     REJECTED = "rejected"
     BLOCKED = "blocked"
 
 
-# Worker Type Enum
-class WorkerType(enum.Enum):
+class WorkerTypeEnum(enum.Enum):
     FULL_TIME = "full_time"
     PART_TIME = "part_time"
     CONTRACT = "contract"
 
 
-# Vehicle Type Enum
-class VehicleType(enum.Enum):
+class VehicleTypeEnum(enum.Enum):
     BIKE = "bike"
     SCOOTER = "scooter"
     AUTO = "auto"
@@ -29,33 +28,38 @@ class VehicleType(enum.Enum):
     NONE = "none"
 
 
-# Worker Availability Enum
-class WorkerAvailability(enum.Enum):
+class WorkerAvailabilityEnum(enum.Enum):
     ONLINE = "online"
     OFFLINE = "offline"
     BUSY = "busy"
 
+
+# ---------------- WORKER MODEL ---------------- #
 
 class Worker(Base):
     __tablename__ = "workers"
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
 
+    # -------- BASIC DETAILS -------- #
     full_name = Column(String, nullable=False)
     phone = Column(String, unique=True, nullable=False)
     email = Column(String, unique=True, nullable=True)
-    password = Column(String, nullable=True)
+    password = Column(String, nullable=False)
 
     phone_verified = Column(Boolean, default=False)
 
     profile_image = Column(String, nullable=True)
 
-    aadhar_number = Column(String, nullable=True)
-    aadhar_front = Column(String, nullable=True)
-    aadhar_back = Column(String, nullable=True)
+    # -------- AADHAAR (KYC) -------- #
+    aadhaar_number = Column(String, nullable=True)   # store last 4 digits only
+    aadhaar_front = Column(String, nullable=True)
+    aadhaar_back = Column(String, nullable=True)
+    aadhaar_client_id = Column(String, nullable=True)
 
     is_kyc_verified = Column(Boolean, default=False)
 
+    # -------- BANK -------- #
     account_holder_name = Column(String, nullable=True)
     account_number = Column(String, nullable=True)
     ifsc_code = Column(String, nullable=True)
@@ -63,6 +67,7 @@ class Worker(Base):
 
     is_bank_verified = Column(Boolean, default=False)
 
+    # -------- ADDRESS -------- #
     address = Column(String, nullable=True)
     city = Column(String, nullable=True)
     state = Column(String, nullable=True)
@@ -70,38 +75,32 @@ class Worker(Base):
 
     is_address_verified = Column(Boolean, default=False)
 
+    # -------- ADMIN -------- #
     is_admin_approved = Column(Boolean, default=False)
 
-    # Worker Status
-    status = Column(Enum(WorkerStatus), default=WorkerStatus.PENDING)
+    # -------- STATUS -------- #
+    status = Column(Enum(WorkerStatusEnum), default=WorkerStatusEnum.PENDING)
 
-    # Worker Type
-    worker_type = Column(Enum(WorkerType), nullable=True)
+    # -------- WORK DETAILS -------- #
+    worker_type = Column(Enum(WorkerTypeEnum), nullable=True)
+    vehicle_type = Column(Enum(VehicleTypeEnum), nullable=True)
+    availability = Column(
+        Enum(WorkerAvailabilityEnum),
+        default=WorkerAvailabilityEnum.OFFLINE
+    )
 
-    # Vehicle Type
-    vehicle_type = Column(Enum(VehicleType), nullable=True)
-
-    # Worker Availability
-    availability = Column(Enum(WorkerAvailability), default=WorkerAvailability.OFFLINE)
-
-    # Employment Type (Normal Field)
     employment_type = Column(String, nullable=True)
-
-    # Service Category (simple field)
     service_category = Column(String, nullable=True)
 
-    # Rating
     rating = Column(Float, default=0.0)
 
-    # Live Location
+    # -------- LOCATION -------- #
     latitude = Column(Float, nullable=True)
     longitude = Column(Float, nullable=True)
 
-    # Device Login Fields
+    # -------- DEVICE -------- #
     device_id = Column(String, nullable=True)
     is_logged_in = Column(Boolean, default=False)
 
+    # -------- TIMESTAMP -------- #
     created_at = Column(DateTime, default=datetime.utcnow)
-    # ONLY CHANGE: added aadhaar_client_id
-
-    aadhaar_client_id = Column(String, nullable=True)  # NEW FIELD

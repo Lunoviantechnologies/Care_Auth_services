@@ -1,20 +1,22 @@
-from fastapi import APIRouter, Depends, UploadFile, File
+from fastapi import APIRouter, Depends, UploadFile, File, Query
 from sqlalchemy.orm import Session
-from fastapi import APIRouter, Depends, Query
 from app.db.session import SessionLocal
-from app.services import worker_service
 from app.schemas.worker_schema import *
+from app.services import worker_service
+
 from app.schemas.worker_schema import (
     WorkerForgotPasswordRequest,
     WorkerVerifyOTPRequest,
     WorkerResetPasswordRequest   
 )
-from app.services.worker_service import (
-    generate_aadhaar_otp,
-    verify_aadhaar_otp
-)
+
+# from app.services.worker_service import (
+#     generate_aadhaar_otp,
+#     verify_aadhaar_otp
+# )
 
 router = APIRouter(prefix="/api", tags=["Worker"])
+
 
 
 def get_db():
@@ -36,19 +38,12 @@ def login(data: WorkerLogin, db: Session = Depends(get_db)):
 
 
 @router.post("/worker/upload-profile/{worker_id}")
-def upload_profile(
-    worker_id: int, file: UploadFile = File(...), db: Session = Depends(get_db)
-):
+def upload_profile(worker_id: int, file: UploadFile = File(...), db: Session = Depends(get_db)):
     return worker_service.upload_profile_image(db, worker_id, file)
 
 
-@router.post("/worker/upload-aadhar/{worker_id}")
-def upload_aadhar(
-    worker_id: int,
-    front: UploadFile = File(...),
-    back: UploadFile = File(...),
-    db: Session = Depends(get_db),
-):
+@router.post("/worker/upload-aadhaar/{worker_id}")
+def upload_aadhaar(worker_id: int, front: UploadFile = File(...), back: UploadFile = File(...), db: Session = Depends(get_db)):
     return worker_service.upload_aadhar_images(db, worker_id, front, back)
 
 
@@ -79,23 +74,28 @@ def reject(worker_id: int, db: Session = Depends(get_db)):
 
 @router.get("/worker/list")
 def list_workers(
-    page: int = Query(0, ge=0),
+    page: int = Query(1, ge=1),
     size: int = Query(10, le=100),
-    search: str = Query(None),
-    sort_by: str = Query("id"),
-    sort_order: str = Query("desc"),
+    search: str = None,
+    sort_by: str = "id",
+    sort_order: str = "desc",
     db: Session = Depends(get_db),
 ):
     return worker_service.list_workers(db, page, size, search, sort_by, sort_order)
 
 
 @router.get("/worker/details/{worker_id}")
-def worker_details(worker_id: int, db: Session = Depends(get_db)):
+def details(worker_id: int, db: Session = Depends(get_db)):
     return worker_service.get_worker_details(db, worker_id)
 
 
+@router.put("/worker/update/{worker_id}")
+def update(worker_id: int, data: WorkerUpdate, db: Session = Depends(get_db)):
+    return worker_service.update_worker(db, worker_id, data)
+
+
 @router.delete("/worker/delete/{worker_id}")
-def delete_worker(worker_id: int, db: Session = Depends(get_db)):
+def delete(worker_id: int, db: Session = Depends(get_db)):
     return worker_service.delete_worker(db, worker_id)
 
 
@@ -104,35 +104,28 @@ def logout(worker_id: int, db: Session = Depends(get_db)):
     return worker_service.logout_worker(db, worker_id)
 
 
-@router.put("/worker/update/{worker_id}")
-def update_worker(worker_id: int, data: WorkerUpdate, db: Session = Depends(get_db)):
-    return worker_service.update_worker(db, worker_id, data)
-
-
 @router.post("/worker/send-otp")
-def send_worker_otp(data: WorkerForgotPasswordRequest, db: Session = Depends(get_db)):
+def send_otp(data: WorkerForgotPasswordRequest, db: Session = Depends(get_db)):
     return worker_service.send_worker_otp(db, data.email)
 
 
 @router.post("/worker/verify-otp")
-def verify_worker_otp(data: WorkerVerifyOTPRequest, db: Session = Depends(get_db)):
+def verify_otp(data: WorkerVerifyOTPRequest, db: Session = Depends(get_db)):
     return worker_service.verify_worker_otp(db, data.email, data.otp)
 
 
 @router.post("/worker/reset-password")
-def reset_worker_password(
-    data: WorkerResetPasswordRequest, db: Session = Depends(get_db)
-):
+def reset_password(data: WorkerResetPasswordRequest, db: Session = Depends(get_db)):
     return worker_service.reset_worker_password(
         db, data.email, data.otp, data.new_password, data.confirm_password
     )
 
 
-@router.post("/aadhaar/generate-otp")
-def generate_otp(worker_id: int, aadhaar: str, db: Session = Depends(get_db)):
-    return generate_aadhaar_otp(db, worker_id, aadhaar)
+# @router.post("/aadhaar/generate-otp")
+# def generate_otp(worker_id: int, aadhaar: str, db: Session = Depends(get_db)):
+#     return generate_aadhaar_otp(db, worker_id, aadhaar)
 
 
-@router.post("/aadhaar/verify-otp")
-def verify_otp(worker_id: int, otp: str, aadhaar: str, db: Session = Depends(get_db)):
-    return verify_aadhaar_otp(db, worker_id, otp, aadhaar)
+# @router.post("/aadhaar/verify-otp")
+# def verify_otp(worker_id: int, otp: str, aadhaar: str, db: Session = Depends(get_db)):
+#     return verify_aadhaar_otp(db, worker_id, otp, aadhaar)

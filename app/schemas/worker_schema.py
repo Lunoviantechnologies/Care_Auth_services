@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, field_validator
 from typing import Optional
 from enum import Enum
 
@@ -33,17 +33,24 @@ class WorkerAvailability(str, Enum):
     BUSY = "busy"
 
 
-# ---------------- CREATE WORKER ---------------- #
+# ---------------- CREATE ---------------- #
 
 class WorkerCreate(BaseModel):
     full_name: str
     phone: str
     email: Optional[EmailStr] = None
     password: str
+
     worker_type: Optional[WorkerType] = None
     vehicle_type: Optional[VehicleType] = None
     employment_type: Optional[str] = None
     service_category: Optional[str] = None
+
+    @field_validator("phone")
+    def validate_phone(cls, v):
+        if len(v) != 10 or not v.isdigit():
+            raise ValueError("Phone must be 10 digits")
+        return v
 
 
 # ---------------- LOGIN ---------------- #
@@ -54,7 +61,7 @@ class WorkerLogin(BaseModel):
     device_id: str
 
 
-# ---------------- UPDATE PROFILE ---------------- #
+# ---------------- UPDATE ---------------- #
 
 class WorkerUpdate(BaseModel):
     full_name: Optional[str] = None
@@ -66,15 +73,19 @@ class WorkerUpdate(BaseModel):
     service_category: Optional[str] = None
 
 
-# ---------------- KYC UPDATE ---------------- #
+# ---------------- KYC ---------------- #
 
 class KYCUpdate(BaseModel):
-    aadhar_number: str
-    aadhar_front: Optional[str] = None
-    aadhar_back: Optional[str] = None
+    aadhaar_number: str
+
+    @field_validator("aadhaar_number")
+    def validate_aadhaar(cls, v):
+        if len(v) != 12 or not v.isdigit():
+            raise ValueError("Aadhaar must be 12 digits")
+        return v
 
 
-# ---------------- BANK UPDATE ---------------- #
+# ---------------- BANK ---------------- #
 
 class BankUpdate(BaseModel):
     account_holder_name: str
@@ -83,7 +94,7 @@ class BankUpdate(BaseModel):
     bank_name: str
 
 
-# ---------------- ADDRESS UPDATE ---------------- #
+# ---------------- ADDRESS ---------------- #
 
 class AddressUpdate(BaseModel):
     address: str
@@ -92,14 +103,14 @@ class AddressUpdate(BaseModel):
     pincode: str
 
 
-# ---------------- LOCATION UPDATE ---------------- #
+# ---------------- LOCATION ---------------- #
 
 class WorkerLocationUpdate(BaseModel):
     latitude: float
     longitude: float
 
 
-# ---------------- AVAILABILITY UPDATE ---------------- #
+# ---------------- AVAILABILITY ---------------- #
 
 class WorkerAvailabilityUpdate(BaseModel):
     availability: WorkerAvailability
@@ -111,14 +122,10 @@ class WorkerForgotPasswordRequest(BaseModel):
     email: EmailStr
 
 
-# ---------------- VERIFY OTP ---------------- #
-
 class WorkerVerifyOTPRequest(BaseModel):
     email: EmailStr
     otp: str
 
-
-# ---------------- RESET PASSWORD ---------------- #
 
 class WorkerResetPasswordRequest(BaseModel):
     email: EmailStr
@@ -127,20 +134,25 @@ class WorkerResetPasswordRequest(BaseModel):
     confirm_password: str
 
 
-# ---------------- RESPONSE SCHEMA ---------------- #
+# ---------------- RESPONSE ---------------- #
 
 class WorkerResponse(BaseModel):
     id: int
     full_name: str
     phone: str
     email: Optional[EmailStr]
+
     status: WorkerStatus
     worker_type: Optional[WorkerType]
     vehicle_type: Optional[VehicleType]
     availability: WorkerAvailability
+
     rating: float
+
     latitude: Optional[float]
     longitude: Optional[float]
+
+    aadhaar_client_id: Optional[str] = None
 
     class Config:
         from_attributes = True
