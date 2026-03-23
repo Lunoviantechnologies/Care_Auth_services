@@ -27,16 +27,16 @@ from app.core.security import hash_password, verify_password, create_access_toke
 from app.core.email_service import send_email_otp
 
 
-BASE_URL = "http://localhost:8000"
+BASE_URL = os.getenv("BASE_URL")
 
-PROFILE_DIR = "app/uploads/profile"
-AADHAR_DIR = "app/uploads/aadhar"
+PROFILE_DIR = os.getenv("PROFILE_DIR")
+AADHAR_DIR = os.getenv("AADHAR_DIR")
 
+SUREPASS_API_KEY = os.getenv("SUREPASS_API_KEY")
+
+# Create folders if not exist
 os.makedirs(PROFILE_DIR, exist_ok=True)
 os.makedirs(AADHAR_DIR, exist_ok=True)
-
-# ================= AADHAAR CONFIG ================= #
-SUREPASS_API_KEY = os.getenv("SUREPASS_API_KEY")
 
 AADHAAR_HEADERS = {
     "Authorization": f"Bearer {SUREPASS_API_KEY}",
