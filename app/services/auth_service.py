@@ -1,4 +1,5 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 from fastapi import HTTPException
 
 from app.db.models.admin_model import Admin
@@ -21,63 +22,68 @@ def generate_tokens(user_id: int, role: str):
 
 
 # ---------------- ADMIN LOGIN ----------------
-def admin_login(db: Session, email: str, password: str):
+async def admin_login(db: AsyncSession, email: str, password: str):
 
-    admin = db.query(Admin).filter(Admin.email == email).first()
+    result = await db.execute(
+        select(Admin).where(Admin.email == email)
+    )
+    admin = result.scalar_one_or_none()
 
     if not admin:
-        raise HTTPException(404, "Admin not found")
+        raise HTTPException(status_code=404, detail="Admin not found")
 
     if not verify_password(password, admin.password):
-        raise HTTPException(401, "Invalid credentials")
+        raise HTTPException(status_code=401, detail="Invalid credentials")
 
     return generate_tokens(admin.id, "admin")
 
 
 # ---------------- WORKER LOGIN ----------------
-def worker_login(db: Session, phone: str, password: str, device_id: str):
+async def worker_login(db: AsyncSession, phone: str, password: str, device_id: str):
 
-    worker = db.query(Worker).filter(Worker.phone == phone).first()
+    result = await db.execute(
+        select(Worker).where(Worker.phone == phone)
+    )
+    worker = result.scalar_one_or_none()
 
     if not worker:
-        raise HTTPException(404, "Worker not found")
+        raise HTTPException(status_code=404, detail="Worker not found")
 
     if not verify_password(password, worker.password):
-        raise HTTPException(401, "Invalid credentials")
+        raise HTTPException(status_code=401, detail="Invalid credentials")
 
     if not worker.is_admin_approved:
-        raise HTTPException(403, "Wait for admin approval")
+        raise HTTPException(status_code=403, detail="Wait for admin approval")
 
     # SINGLE DEVICE LOGIN
     worker.device_id = device_id
     worker.is_logged_in = True
 
-    db.commit()
+    await db.commit()
 
     return generate_tokens(worker.id, "worker")
 
 
 # ---------------- CUSTOMER LOGIN ----------------
-# CUSTOMER LOGIN SERVICE
-def customer_login(db: Session, phone: str, password: str):
+async def customer_login(db: AsyncSession, phone: str, password: str):
 
-    customer = db.query(Customer).filter(Customer.phone == phone).first()
+    result = await db.execute(
+        select(Customer).where(Customer.phone == phone)
+    )
+    customer = result.scalar_one_or_none()
 
-    # Customer not found
     if not customer:
         raise HTTPException(
             status_code=404,
             detail="Customer with this phone number not found"
         )
 
-    # Password check
     if not verify_password(password, customer.password):
         raise HTTPException(
             status_code=401,
             detail="Incorrect password"
         )
 
-    # Inactive account
     if not customer.isActive:
         raise HTTPException(
             status_code=403,
@@ -88,34 +94,41 @@ def customer_login(db: Session, phone: str, password: str):
 
 
 # ---------------- WORKER FIREBASE LOGIN ----------------
-def firebase_worker_login(db: Session, token: str, device_id: str):
+async def firebase_worker_login(db: AsyncSession, token: str, device_id: str):
 
+    # ⚠️ If this function is sync, keep as is
     phone = verify_firebase_token(token)
 
-    worker = db.query(Worker).filter(Worker.phone == phone).first()
+    result = await db.execute(
+        select(Worker).where(Worker.phone == phone)
+    )
+    worker = result.scalar_one_or_none()
 
     if not worker:
-        raise HTTPException(404, "Worker not found")
+        raise HTTPException(status_code=404, detail="Worker not found")
 
     if not worker.is_admin_approved:
-        raise HTTPException(403, "Wait for admin approval")
+        raise HTTPException(status_code=403, detail="Wait for admin approval")
 
     worker.device_id = device_id
     worker.is_logged_in = True
 
-    db.commit()
+    await db.commit()
 
     return generate_tokens(worker.id, "worker")
 
 
 # ---------------- CUSTOMER FIREBASE LOGIN ----------------
-def firebase_customer_login(db: Session, token: str):
+async def firebase_customer_login(db: AsyncSession, token: str):
 
     phone = verify_firebase_token(token)
 
-    customer = db.query(Customer).filter(Customer.phone == phone).first()
+    result = await db.execute(
+        select(Customer).where(Customer.phone == phone)
+    )
+    customer = result.scalar_one_or_none()
 
     if not customer:
-        raise HTTPException(404, "Customer not found")
+        raise HTTPException(status_code=404, detail="Customer not found")
 
     return generate_tokens(customer.id, "customer")

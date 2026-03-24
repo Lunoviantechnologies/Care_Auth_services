@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
-from app.db.session import SessionLocal
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.db.session import AsyncSessionLocal
 from app.schemas.customer_schema import CustomerLogin
-from app.services.auth_service import customer_login
 
 from app.services.auth_service import (
     admin_login,
@@ -15,44 +15,43 @@ from app.services.auth_service import (
 router = APIRouter(prefix="/api")
 
 
-# DB SESSION
-def get_db():
-    db = SessionLocal()
-    try:
+# ---------------- DB SESSION ----------------
+async def get_db():
+    async with AsyncSessionLocal() as db:
         yield db
-    finally:
-        db.close()
 
 
 # ---------------- ADMIN LOGIN ----------------
 @router.post("/admin/login")
-def login_admin(data: dict, db: Session = Depends(get_db)):
+async def login_admin(data: dict, db: AsyncSession = Depends(get_db)):
 
     email = data.get("email")
     password = data.get("password")
 
     if not email or not password:
-        raise HTTPException(400, "Email and password required")
+        raise HTTPException(status_code=400, detail="Email and password required")
 
-    return {"data": admin_login(db, email, password)}
+    return {
+        "data": await admin_login(db, email, password)
+    }
 
 
 # ---------------- WORKER LOGIN ----------------
 @router.post("/worker/login")
-def login_worker_api(data: dict, db: Session = Depends(get_db)):
+async def login_worker_api(data: dict, db: AsyncSession = Depends(get_db)):
 
     phone = data.get("phone")
     password = data.get("password")
     device_id = data.get("device_id")
 
     if not phone or not password:
-        raise HTTPException(400, "Phone and password required")
+        raise HTTPException(status_code=400, detail="Phone and password required")
 
     if not device_id:
-        raise HTTPException(400, "device_id required")
+        raise HTTPException(status_code=400, detail="device_id required")
 
     return {
-        "data": worker_login(
+        "data": await worker_login(
             db,
             phone,
             password,
@@ -62,9 +61,8 @@ def login_worker_api(data: dict, db: Session = Depends(get_db)):
 
 
 # ---------------- CUSTOMER LOGIN ----------------
-
 @router.post("/customer/login")
-def login_customer_api(data: CustomerLogin, db: Session = Depends(get_db)):
+async def login_customer_api(data: CustomerLogin, db: AsyncSession = Depends(get_db)):
 
     if not data.phone:
         raise HTTPException(status_code=400, detail="Phone number required")
@@ -73,28 +71,29 @@ def login_customer_api(data: CustomerLogin, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Password required")
 
     return {
-        "data": customer_login(
+        "data": await customer_login(
             db,
             data.phone,
             data.password
         )
     }
 
+
 # ---------------- WORKER FIREBASE LOGIN ----------------
 @router.post("/worker/firebase-login")
-def worker_firebase_login_api(data: dict, db: Session = Depends(get_db)):
+async def worker_firebase_login_api(data: dict, db: AsyncSession = Depends(get_db)):
 
     token = data.get("token")
     device_id = data.get("device_id")
 
     if not token:
-        raise HTTPException(400, "Firebase token required")
+        raise HTTPException(status_code=400, detail="Firebase token required")
 
     if not device_id:
-        raise HTTPException(400, "device_id required")
+        raise HTTPException(status_code=400, detail="device_id required")
 
     return {
-        "data": firebase_worker_login(
+        "data": await firebase_worker_login(
             db,
             token,
             device_id
@@ -104,15 +103,15 @@ def worker_firebase_login_api(data: dict, db: Session = Depends(get_db)):
 
 # ---------------- CUSTOMER FIREBASE LOGIN ----------------
 @router.post("/customer/firebase-login")
-def customer_firebase_login_api(data: dict, db: Session = Depends(get_db)):
+async def customer_firebase_login_api(data: dict, db: AsyncSession = Depends(get_db)):
 
     token = data.get("token")
 
     if not token:
-        raise HTTPException(400, "Firebase token required")
+        raise HTTPException(status_code=400, detail="Firebase token required")
 
     return {
-        "data": firebase_customer_login(
+        "data": await firebase_customer_login(
             db,
             token
         )

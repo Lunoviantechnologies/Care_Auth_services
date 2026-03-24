@@ -3,10 +3,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     #  IMPORTANT: point to correct .env location
-    model_config = SettingsConfigDict(
-        env_file=".env", 
-        extra="ignore"
-    )
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     #  JWT
     SECRET_KEY: str = "supersecret"
@@ -25,12 +22,13 @@ class Settings(BaseSettings):
     #  Email
     SMTP_HOST: str = "smtp.gmail.com"
     SMTP_PORT: int = 587
-    SMTP_USER: str = "your_email@gmail.com"
-    SMTP_PASSWORD: str = "your_password"
-
+    SMTP_USER: str = "gangadariprashanth12@gmail.com"
+    SMTP_PASSWORD: str = "ygkg fueo hyew vjip"
+    ADMIN_EMAIL: str = "gangadariprashanth12@gmail.com"
     #  App
     APP_NAME: str = "Multi Role Auth System"
     DEBUG: bool = True
-    
+
+
 settings = Settings()
 print("✅ DATABASE_URL loaded:", settings.DATABASE_URL)

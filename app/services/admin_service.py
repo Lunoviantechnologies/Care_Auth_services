@@ -1,4 +1,5 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 from app.db.models.admin_model import Admin
 from app.db.models.otp_model import OTP
 from app.core.security import hash_password
@@ -10,12 +11,15 @@ import random
 
 
 # CREATE ADMIN
-def create_admin(db: Session, data):
+async def create_admin(db: AsyncSession, data):
     try:
-        existing_admin = db.query(Admin).filter(Admin.email == data.email).first()
+        result = await db.execute(
+            select(Admin).where(Admin.email == data.email)
+        )
+        existing_admin = result.scalar_one_or_none()
 
         if existing_admin:
-            raise HTTPException(status_code=400, detail="Admin with this email already exists")
+            raise HTTPException(status_code=400, detail="Admin already exists")
 
         admin = Admin(
             name=data.name,
@@ -25,27 +29,31 @@ def create_admin(db: Session, data):
         )
 
         db.add(admin)
-        db.commit()
-        db.refresh(admin)
+        await db.commit()
+        await db.refresh(admin)
 
         return {"message": "Admin created successfully", "data": admin}
 
     except SQLAlchemyError as e:
-        db.rollback()
-        raise HTTPException(status_code=500, detail=f"Admin creation failed: {str(e)}")
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # GET ALL ADMINS
-def get_all(db: Session):
+async def get_all(db: AsyncSession):
     try:
-        return db.query(Admin).all()
+        result = await db.execute(select(Admin))
+        return result.scalars().all()
     except Exception:
         raise HTTPException(status_code=500, detail="Failed to fetch admins")
 
 
 # GET ADMIN BY ID
-def get_by_id(db: Session, id: str):
-    admin = db.query(Admin).filter(Admin.id == id).first()
+async def get_by_id(db: AsyncSession, id: str):
+    result = await db.execute(
+        select(Admin).where(Admin.id == id)
+    )
+    admin = result.scalar_one_or_none()
 
     if not admin:
         raise HTTPException(status_code=404, detail="Admin not found")
@@ -54,9 +62,9 @@ def get_by_id(db: Session, id: str):
 
 
 # UPDATE ADMIN
-def update(db: Session, id: str, data):
+async def update(db: AsyncSession, id: str, data):
     try:
-        admin = get_by_id(db, id)
+        admin = await get_by_id(db, id)
 
         if data.name:
             admin.name = data.name
@@ -70,37 +78,38 @@ def update(db: Session, id: str, data):
         if data.isActive is not None:
             admin.isActive = data.isActive
 
-        db.commit()
-        db.refresh(admin)
+        await db.commit()
+        await db.refresh(admin)
 
         return {"message": "Admin updated successfully", "data": admin}
 
     except SQLAlchemyError as e:
-        db.rollback()
-        raise HTTPException(status_code=500, detail=f"Admin update failed: {str(e)}")
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # DELETE ADMIN
-def delete(db: Session, id: str):
+async def delete(db: AsyncSession, id: str):
     try:
-        admin = get_by_id(db, id)
+        admin = await get_by_id(db, id)
 
-        db.delete(admin)
-        db.commit()
+        await db.delete(admin)
+        await db.commit()
 
         return {"message": "Admin deleted successfully"}
 
     except SQLAlchemyError as e:
-        db.rollback()
-        raise HTTPException(status_code=500, detail=f"Admin deletion failed: {str(e)}")
-
-
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # SEND OTP
-def send_otp(db: Session, email: str):
+async def send_otp(db: AsyncSession, email: str):
 
-    admin = db.query(Admin).filter(Admin.email == email).first()
+    result = await db.execute(
+        select(Admin).where(Admin.email == email)
+    )
+    admin = result.scalar_one_or_none()
 
     if not admin:
         raise HTTPException(status_code=404, detail="Admin not found")
@@ -114,21 +123,23 @@ def send_otp(db: Session, email: str):
     )
 
     db.add(otp_record)
-    db.commit()
+    await db.commit()
 
-    # send email
-    send_email_otp(email, otp_code)
+    # ⚠️ Make sure this function is async OR run in background
+    await send_email_otp(email, otp_code)
 
-    return {"message": "OTP sent to email"}
+    return {"message": "OTP sent successfully"}
 
 
 # VERIFY OTP
-def verify_otp(db: Session, email: str, otp: str):
+async def verify_otp(db: AsyncSession, email: str, otp: str):
 
-    otp_record = db.query(OTP).filter(
-        OTP.email == email,
-        OTP.otp == otp
-    ).order_by(OTP.id.desc()).first()
+    result = await db.execute(
+        select(OTP)
+        .where(OTP.email == email, OTP.otp == otp)
+        .order_by(OTP.id.desc())
+    )
+    otp_record = result.scalar_one_or_none()
 
     if not otp_record:
         raise HTTPException(status_code=400, detail="Invalid OTP")
@@ -140,26 +151,37 @@ def verify_otp(db: Session, email: str, otp: str):
 
 
 # RESET PASSWORD
-def reset_password(db: Session, email: str, otp: str, new_password: str, confirm_password: str):
+async def reset_password(
+    db: AsyncSession,
+    email: str,
+    otp: str,
+    new_password: str,
+    confirm_password: str
+):
 
     if new_password != confirm_password:
         raise HTTPException(status_code=400, detail="Passwords do not match")
 
-    otp_record = db.query(OTP).filter(
-        OTP.email == email,
-        OTP.otp == otp
-    ).order_by(OTP.id.desc()).first()
+    result = await db.execute(
+        select(OTP)
+        .where(OTP.email == email, OTP.otp == otp)
+        .order_by(OTP.id.desc())
+    )
+    otp_record = result.scalar_one_or_none()
 
     if not otp_record:
         raise HTTPException(status_code=400, detail="Invalid OTP")
 
-    admin = db.query(Admin).filter(Admin.email == email).first()
+    result = await db.execute(
+        select(Admin).where(Admin.email == email)
+    )
+    admin = result.scalar_one_or_none()
 
     if not admin:
         raise HTTPException(status_code=404, detail="Admin not found")
 
     admin.password = hash_password(new_password)
 
-    db.commit()
+    await db.commit()
 
     return {"message": "Password reset successfully"}
