@@ -12,13 +12,11 @@ from app.db.models import admin_model, customer_model, worker_model
 from app.api import auth_routes, admin_routes, worker_routes, customer_routes
 from app.api.contact_controller import router as contact_router
 from app.api.settings_routes import router as settings_router
+from app.api.api.v1.endpoints import otp
 
 
 # ---------------- CREATE FASTAPI APP ----------------
-app = FastAPI(
-    title=settings.APP_NAME,
-    debug=settings.DEBUG
-)
+app = FastAPI(title=settings.APP_NAME, debug=settings.DEBUG)
 
 
 # ---------------- DATABASE INIT (ASYNC CONTEXT) ----------------
@@ -26,13 +24,14 @@ app = FastAPI(
 # - engine.begin() → async DB connection
 # - run_sync() → runs sync SQLAlchemy inside async safely
 
+
 async def create_tables() -> None:
     """
     Create database tables using async engine.
     This bridges async engine with sync SQLAlchemy metadata.
     """
-    async with engine.begin() as conn:   # ✅ async context manager
-        await conn.run_sync(Base.metadata.create_all)  
+    async with engine.begin() as conn:  # ✅ async context manager
+        await conn.run_sync(Base.metadata.create_all)
         # 🔁 run_sync executes sync code (create_all) inside async
 
 
@@ -44,7 +43,7 @@ async def startup() -> None:
     Startup event runs in async event loop.
     Used for DB initialization, connections, etc.
     """
-    await create_tables()   # ✅ awaited async function
+    await create_tables()  # ✅ awaited async function
 
 
 # ---------------- CORS MIDDLEWARE ----------------
@@ -82,3 +81,4 @@ app.include_router(worker_routes.router)
 app.include_router(customer_routes.router)
 app.include_router(contact_router)
 app.include_router(settings_router)
+app.include_router(otp.router)

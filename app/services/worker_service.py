@@ -22,6 +22,7 @@ os.makedirs(AADHAR_DIR, exist_ok=True)
 
 # ---------------- COMMON ---------------- #
 
+
 async def get_worker_or_404(db: AsyncSession, worker_id: int):
     result = await db.execute(select(Worker).where(Worker.id == worker_id))
     worker = result.scalar_one_or_none()
@@ -45,6 +46,7 @@ def format_worker(worker):
 
 # ---------------- REGISTER ---------------- #
 
+
 async def create_worker(db: AsyncSession, data):
 
     result = await db.execute(select(Worker).where(Worker.phone == data.phone))
@@ -60,7 +62,7 @@ async def create_worker(db: AsyncSession, data):
         full_name=data.full_name,
         phone=data.phone,
         email=data.email,
-        password=hash_password(data.password)
+        password=hash_password(data.password),
     )
 
     db.add(worker)
@@ -70,6 +72,7 @@ async def create_worker(db: AsyncSession, data):
 
 
 # ---------------- LOGIN ---------------- #
+
 
 async def login_worker(db: AsyncSession, data):
 
@@ -97,6 +100,7 @@ async def login_worker(db: AsyncSession, data):
 
 # ---------------- PROFILE ---------------- #
 
+
 async def upload_profile_image(db: AsyncSession, worker_id: int, file: UploadFile):
 
     worker = await get_worker_or_404(db, worker_id)
@@ -119,6 +123,7 @@ def _save_file(file, path):
 
 
 # ---------------- AADHAAR ---------------- #
+
 
 async def upload_aadhar_images(db: AsyncSession, worker_id: int, front, back):
 
@@ -155,6 +160,7 @@ async def update_kyc(db: AsyncSession, worker_id: int, data):
 
 # ---------------- BANK ---------------- #
 
+
 async def update_bank(db: AsyncSession, worker_id: int, data):
 
     worker = await get_worker_or_404(db, worker_id)
@@ -172,6 +178,7 @@ async def update_bank(db: AsyncSession, worker_id: int, data):
 
 # ---------------- ADDRESS ---------------- #
 
+
 async def update_address(db: AsyncSession, worker_id: int, data):
 
     worker = await get_worker_or_404(db, worker_id)
@@ -188,6 +195,7 @@ async def update_address(db: AsyncSession, worker_id: int, data):
 
 
 # ---------------- ADMIN ---------------- #
+
 
 async def approve_worker(db: AsyncSession, worker_id: int):
 
@@ -217,7 +225,10 @@ async def reject_worker(db: AsyncSession, worker_id: int):
 
 # ---------------- LIST ---------------- #
 
-async def list_workers(db: AsyncSession, page=1, size=10, search=None, sort_by="id", sort_order="desc"):
+
+async def list_workers(
+    db: AsyncSession, page=1, size=10, search=None, sort_by="id", sort_order="desc"
+):
 
     query = select(Worker)
 
@@ -231,7 +242,9 @@ async def list_workers(db: AsyncSession, page=1, size=10, search=None, sort_by="
         )
 
     sort_column = getattr(Worker, sort_by, Worker.id)
-    query = query.order_by(asc(sort_column) if sort_order == "asc" else desc(sort_column))
+    query = query.order_by(
+        asc(sort_column) if sort_order == "asc" else desc(sort_column)
+    )
 
     result = await db.execute(query)
     workers = result.scalars().all()
@@ -251,12 +264,13 @@ async def list_workers(db: AsyncSession, page=1, size=10, search=None, sort_by="
 
 # ---------------- DETAILS ---------------- #
 
-async def get_worker_details(db: AsyncSession, worker_id: int):
-    worker = await get_worker_or_404(db, worker_id)
-    return format_worker(worker)
+
+def get_worker_by_id(worker_id: int, db):
+    return db.query(Worker).filter(Worker.id == worker_id).first()
 
 
 # ---------------- UPDATE ---------------- #
+
 
 async def update_worker(db: AsyncSession, worker_id: int, data):
 
@@ -272,6 +286,7 @@ async def update_worker(db: AsyncSession, worker_id: int, data):
 
 # ---------------- DELETE ---------------- #
 
+
 async def delete_worker(db: AsyncSession, worker_id: int):
 
     worker = await get_worker_or_404(db, worker_id)
@@ -283,6 +298,7 @@ async def delete_worker(db: AsyncSession, worker_id: int):
 
 
 # ---------------- LOGOUT ---------------- #
+
 
 async def logout_worker(db: AsyncSession, worker_id: int):
 
@@ -296,6 +312,7 @@ async def logout_worker(db: AsyncSession, worker_id: int):
 
 
 # ---------------- OTP ---------------- #
+
 
 async def send_worker_otp(db: AsyncSession, email: str):
 
@@ -324,9 +341,7 @@ async def send_worker_otp(db: AsyncSession, email: str):
 async def verify_worker_otp(db: AsyncSession, email: str, otp: str):
 
     result = await db.execute(
-        select(OTP)
-        .where(OTP.email == email, OTP.otp == otp)
-        .order_by(OTP.id.desc())
+        select(OTP).where(OTP.email == email, OTP.otp == otp).order_by(OTP.id.desc())
     )
     otp_record = result.scalar_one_or_none()
 
@@ -339,7 +354,9 @@ async def verify_worker_otp(db: AsyncSession, email: str, otp: str):
     return {"message": "OTP verified"}
 
 
-async def reset_worker_password(db: AsyncSession, email: str, otp: str, new_password: str, confirm_password: str):
+async def reset_worker_password(
+    db: AsyncSession, email: str, otp: str, new_password: str, confirm_password: str
+):
 
     if new_password != confirm_password:
         raise HTTPException(400, "Passwords mismatch")
@@ -354,3 +371,8 @@ async def reset_worker_password(db: AsyncSession, email: str, otp: str, new_pass
     await db.commit()
 
     return {"message": "Password reset successful"}
+
+
+async def get_worker_by_id(worker_id: int, db):
+    result = await db.execute(select(Worker).where(Worker.id == worker_id))
+    return result.scalar_one_or_none()
