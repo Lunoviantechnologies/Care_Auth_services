@@ -1,9 +1,12 @@
+import datetime
+
 from pydantic import BaseModel, EmailStr, field_validator
 from typing import Optional
 from enum import Enum
 
 
 # ---------------- ENUMS ---------------- #
+
 
 class WorkerStatus(str, Enum):
     PENDING = "pending"
@@ -35,6 +38,7 @@ class WorkerAvailability(str, Enum):
 
 # ---------------- CREATE ---------------- #
 
+
 class WorkerCreate(BaseModel):
     full_name: str
     phone: str
@@ -55,6 +59,7 @@ class WorkerCreate(BaseModel):
 
 # ---------------- LOGIN ---------------- #
 
+
 class WorkerLogin(BaseModel):
     phone: str
     password: str
@@ -62,6 +67,7 @@ class WorkerLogin(BaseModel):
 
 
 # ---------------- UPDATE ---------------- #
+
 
 class WorkerUpdate(BaseModel):
     full_name: Optional[str] = None
@@ -75,6 +81,7 @@ class WorkerUpdate(BaseModel):
 
 # ---------------- KYC ---------------- #
 
+
 class KYCUpdate(BaseModel):
     aadhaar_number: str
 
@@ -87,6 +94,7 @@ class KYCUpdate(BaseModel):
 
 # ---------------- BANK ---------------- #
 
+
 class BankUpdate(BaseModel):
     account_holder_name: str
     account_number: str
@@ -95,6 +103,7 @@ class BankUpdate(BaseModel):
 
 
 # ---------------- ADDRESS ---------------- #
+
 
 class AddressUpdate(BaseModel):
     address: str
@@ -105,6 +114,7 @@ class AddressUpdate(BaseModel):
 
 # ---------------- LOCATION ---------------- #
 
+
 class WorkerLocationUpdate(BaseModel):
     latitude: float
     longitude: float
@@ -112,11 +122,13 @@ class WorkerLocationUpdate(BaseModel):
 
 # ---------------- AVAILABILITY ---------------- #
 
+
 class WorkerAvailabilityUpdate(BaseModel):
     availability: WorkerAvailability
 
 
 # ---------------- FORGOT PASSWORD ---------------- #
+
 
 class WorkerForgotPasswordRequest(BaseModel):
     email: EmailStr
@@ -136,23 +148,38 @@ class WorkerResetPasswordRequest(BaseModel):
 
 # ---------------- RESPONSE ---------------- #
 
+
 class WorkerResponse(BaseModel):
     id: int
     full_name: str
     phone: str
     email: Optional[EmailStr]
 
+    profile_image: Optional[str]
     status: WorkerStatus
+
     worker_type: Optional[WorkerType]
     vehicle_type: Optional[VehicleType]
     availability: WorkerAvailability
+
+    employment_type: Optional[str]
+    service_category: Optional[str]
 
     rating: float
 
     latitude: Optional[float]
     longitude: Optional[float]
 
-    aadhaar_client_id: Optional[str] = None
+    city: Optional[str]
+    state: Optional[str]
+    pincode: Optional[str]
+    address: Optional[str]
+
+    is_admin_approved: bool
+    is_kyc_verified: bool
+    is_bank_verified: bool
+
+    created_at: datetime
 
     class Config:
         from_attributes = True

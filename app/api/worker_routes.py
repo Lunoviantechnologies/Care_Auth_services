@@ -5,7 +5,7 @@ from app.db.session import AsyncSessionLocal
 from app.schemas.worker_schema import *
 from app.services import worker_service
 from app.services.worker_service import get_worker_by_id  # ✅ FIX
-
+from app.db.models.worker_model import ServiceCategoryEnum
 from app.schemas.worker_schema import (
     WorkerForgotPasswordRequest,
     WorkerVerifyOTPRequest,
@@ -91,10 +91,17 @@ async def list_workers(
     search: str = None,
     sort_by: str = "id",
     sort_order: str = "desc",
+    service_category: ServiceCategoryEnum = None,  # 👈 NEW PARAM
     db: AsyncSession = Depends(get_db),
 ):
     return await worker_service.list_workers(
-        db, page, size, search, sort_by, sort_order
+        db,
+        page,
+        size,
+        search,
+        sort_by,
+        sort_order,
+        service_category,  # 👈 PASS IT
     )
 
 

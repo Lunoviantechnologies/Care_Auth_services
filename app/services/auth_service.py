@@ -5,6 +5,7 @@ from fastapi import HTTPException
 from app.db.models.admin_model import Admin
 from app.db.models.worker_model import Worker
 from app.db.models.customer_model import Customer
+from datetime import datetime
 
 from app.core.security import verify_password, create_access_token, create_refresh_token
 from app.services.firebase_service import verify_firebase_token
@@ -24,9 +25,7 @@ def generate_tokens(user_id: int, role: str):
 # ---------------- ADMIN LOGIN ----------------
 async def admin_login(db: AsyncSession, email: str, password: str):
 
-    result = await db.execute(
-        select(Admin).where(Admin.email == email)
-    )
+    result = await db.execute(select(Admin).where(Admin.email == email))
     admin = result.scalar_one_or_none()
 
     if not admin:
@@ -38,12 +37,9 @@ async def admin_login(db: AsyncSession, email: str, password: str):
     return generate_tokens(admin.id, "admin")
 
 
-# ---------------- WORKER LOGIN ----------------
 async def worker_login(db: AsyncSession, phone: str, password: str, device_id: str):
 
-    result = await db.execute(
-        select(Worker).where(Worker.phone == phone)
-    )
+    result = await db.execute(select(Worker).where(Worker.phone == phone))
     worker = result.scalar_one_or_none()
 
     if not worker:
@@ -55,7 +51,21 @@ async def worker_login(db: AsyncSession, phone: str, password: str, device_id: s
     if not worker.is_admin_approved:
         raise HTTPException(status_code=403, detail="Wait for admin approval")
 
-    # SINGLE DEVICE LOGIN
+    # ================= BAN LOGIC (IMPORTANT 🔥) =================
+    if worker.is_banned:
+        if worker.banned_until and worker.banned_until > datetime.utcnow():
+            remaining_days = (worker.banned_until - datetime.utcnow()).days
+
+            raise HTTPException(
+                status_code=403,
+                detail=f"Account banned. Try again after {remaining_days} days",
+            )
+        else:
+            # ✅ AUTO UNBAN AFTER TIME COMPLETED
+            worker.is_banned = False
+            worker.banned_until = None
+
+    # ================= LOGIN =================
     worker.device_id = device_id
     worker.is_logged_in = True
 
@@ -67,28 +77,19 @@ async def worker_login(db: AsyncSession, phone: str, password: str, device_id: s
 # ---------------- CUSTOMER LOGIN ----------------
 async def customer_login(db: AsyncSession, phone: str, password: str):
 
-    result = await db.execute(
-        select(Customer).where(Customer.phone == phone)
-    )
+    result = await db.execute(select(Customer).where(Customer.phone == phone))
     customer = result.scalar_one_or_none()
 
     if not customer:
         raise HTTPException(
-            status_code=404,
-            detail="Customer with this phone number not found"
+            status_code=404, detail="Customer with this phone number not found"
         )
 
     if not verify_password(password, customer.password):
-        raise HTTPException(
-            status_code=401,
-            detail="Incorrect password"
-        )
+        raise HTTPException(status_code=401, detail="Incorrect password")
 
     if not customer.isActive:
-        raise HTTPException(
-            status_code=403,
-            detail="Customer account is inactive"
-        )
+        raise HTTPException(status_code=403, detail="Customer account is inactive")
 
     return generate_tokens(customer.id, "customer")
 
@@ -99,9 +100,7 @@ async def firebase_worker_login(db: AsyncSession, token: str, device_id: str):
     # ⚠️ If this function is sync, keep as is
     phone = verify_firebase_token(token)
 
-    result = await db.execute(
-        select(Worker).where(Worker.phone == phone)
-    )
+    result = await db.execute(select(Worker).where(Worker.phone == phone))
     worker = result.scalar_one_or_none()
 
     if not worker:
@@ -123,9 +122,7 @@ async def firebase_customer_login(db: AsyncSession, token: str):
 
     phone = verify_firebase_token(token)
 
-    result = await db.execute(
-        select(Customer).where(Customer.phone == phone)
-    )
+    result = await db.execute(select(Customer).where(Customer.phone == phone))
     customer = result.scalar_one_or_none()
 
     if not customer:

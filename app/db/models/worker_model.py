@@ -6,11 +6,23 @@ import enum
 
 # ---------------- ENUMS ---------------- #
 
+
 class WorkerStatusEnum(enum.Enum):
     PENDING = "pending"
     APPROVED = "approved"
     REJECTED = "rejected"
     BLOCKED = "blocked"
+
+
+# ---------------- SERVICE CATEGORY ENUM ---------------- #
+
+
+class ServiceCategoryEnum(enum.Enum):
+    BABY_CARE = "baby_care"
+    PET_CARE = "pet_care"
+    ELDER_CARE = "elder_care"
+    PREGNANCY_CARE = "pregnancy_care"
+    KITCHEN_SERVICE = "kitchen_service"
 
 
 class WorkerTypeEnum(enum.Enum):
@@ -36,6 +48,7 @@ class WorkerAvailabilityEnum(enum.Enum):
 
 # ---------------- WORKER MODEL ---------------- #
 
+
 class Worker(Base):
     __tablename__ = "workers"
 
@@ -52,7 +65,7 @@ class Worker(Base):
     profile_image = Column(String, nullable=True)
 
     # -------- AADHAAR (KYC) -------- #
-    aadhaar_number = Column(String, nullable=True)   # store last 4 digits only
+    aadhaar_number = Column(String, nullable=True)  # store last 4 digits only
     aadhaar_front = Column(String, nullable=True)
     aadhaar_back = Column(String, nullable=True)
     aadhaar_client_id = Column(String, nullable=True)
@@ -85,12 +98,11 @@ class Worker(Base):
     worker_type = Column(Enum(WorkerTypeEnum), nullable=True)
     vehicle_type = Column(Enum(VehicleTypeEnum), nullable=True)
     availability = Column(
-        Enum(WorkerAvailabilityEnum),
-        default=WorkerAvailabilityEnum.OFFLINE
+        Enum(WorkerAvailabilityEnum), default=WorkerAvailabilityEnum.OFFLINE
     )
 
     employment_type = Column(String, nullable=True)
-    service_category = Column(String, nullable=True)
+    service_category = Column(Enum(ServiceCategoryEnum), nullable=True)
 
     rating = Column(Float, default=0.0)
 
@@ -104,3 +116,8 @@ class Worker(Base):
 
     # -------- TIMESTAMP -------- #
     created_at = Column(DateTime, default=datetime.utcnow)
+
+    is_banned = Column(Boolean, default=False)
+
+
+banned_until = Column(DateTime, nullable=True)

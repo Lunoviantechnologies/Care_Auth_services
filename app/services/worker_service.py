@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import or_, asc, desc
 
-from app.db.models.worker_model import Worker, WorkerStatusEnum
+from app.db.models.worker_model import Worker, WorkerStatusEnum, ServiceCategoryEnum
 from app.db.models.otp_model import OTP
 from app.core.security import hash_password, verify_password, create_access_token
 from app.core.email_service import send_email_otp
@@ -227,11 +227,17 @@ async def reject_worker(db: AsyncSession, worker_id: int):
 
 
 async def list_workers(
-    db: AsyncSession, page=1, size=10, search=None, sort_by="id", sort_order="desc"
+    db: AsyncSession,
+    page=1,
+    size=10,
+    search=None,
+    sort_by="id",
+    sort_order="desc",
+    service_category: ServiceCategoryEnum = None   #  NEW FILTER
 ):
-
     query = select(Worker)
 
+    #  SEARCH
     if search:
         query = query.where(
             or_(
@@ -241,6 +247,11 @@ async def list_workers(
             )
         )
 
+    #  FILTER (NEW)
+    if service_category:
+        query = query.where(Worker.service_category == service_category)
+
+    #  SORTING
     sort_column = getattr(Worker, sort_by, Worker.id)
     query = query.order_by(
         asc(sort_column) if sort_order == "asc" else desc(sort_column)

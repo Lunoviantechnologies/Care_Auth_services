@@ -3,8 +3,10 @@ import asyncio
 from email.mime.text import MIMEText
 import os
 
-EMAIL = os.getenv("EMAIL")
+EMAIL = os.getenv("EMAIL_ADDRESS")
 PASSWORD = os.getenv("EMAIL_PASSWORD")
+SMTP_HOST = os.getenv("SMTP_HOST")
+SMTP_PORT = int(os.getenv("SMTP_PORT"))
 
 
 def _send_email_sync(to_email: str, subject: str, body: str):

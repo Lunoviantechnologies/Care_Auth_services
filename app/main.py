@@ -2,8 +2,12 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from app.db.session import Base, engine
+from Auth_service.app.api import complaint_router
+from Auth_service.app.api import complaint_router
+from Booking_service.app.api import service_router
+from app.db.session import AsyncSessionLocal, Base, engine
 from app.core.config import settings
+from app.db.seed import seed_services
 
 # Import models (IMPORTANT: ensures tables are registered)
 from app.db.models import admin_model, customer_model, worker_model
@@ -73,6 +77,14 @@ def root() -> dict:
     return {"message": "API is running 🚀"}
 
 
+@app.on_event("startup")
+async def startup_event():
+
+    # if you already have create_all → keep it
+    async with AsyncSessionLocal() as db:
+        await seed_services(db)
+
+
 # ---------------- ROUTES ----------------
 # These routers internally use async endpoints
 app.include_router(auth_routes.router)
@@ -82,3 +94,5 @@ app.include_router(customer_routes.router)
 app.include_router(contact_router)
 app.include_router(settings_router)
 app.include_router(otp.router)
+app.include_router(service_router)
+app.include_router(complaint_router)
