@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String
-from app.db.models import Base  # ⚠️ use your existing Base
-
+from app.db.session import Base  # ⚠️ use your existing Base
+from app.db.base import Base
 
 class Service(Base):
     __tablename__ = "services"

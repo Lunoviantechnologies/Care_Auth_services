@@ -2,13 +2,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from Auth_service.app.api import complaint_router
-from Auth_service.app.api import complaint_router
-from Booking_service.app.api import service_router
 from app.db.session import AsyncSessionLocal, Base, engine
 from app.core.config import settings
 from app.db.seed import seed_services
-
+from app.api.complaint_router import router as complaint_router
+from app.api.service_router import router as service_router
 # Import models (IMPORTANT: ensures tables are registered)
 from app.db.models import admin_model, customer_model, worker_model
 
@@ -78,9 +76,12 @@ def root() -> dict:
 
 
 @app.on_event("startup")
-async def startup_event():
+async def startup():
+    # ✅ Step 1: Create tables FIRST
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
 
-    # if you already have create_all → keep it
+    # ✅ Step 2: Seed AFTER tables exist
     async with AsyncSessionLocal() as db:
         await seed_services(db)
 
