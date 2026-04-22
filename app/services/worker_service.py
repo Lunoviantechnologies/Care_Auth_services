@@ -4,13 +4,13 @@ from datetime import datetime, timedelta
 from fastapi import HTTPException, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy import or_, asc, desc
+from sqlalchemy import or_, asc, desc, func
 
 from app.db.models.worker_model import Worker, WorkerStatusEnum, ServiceCategoryEnum
 from app.db.models.otp_model import OTP
 from app.core.security import hash_password, verify_password, create_access_token
 from app.core.email_service import send_email_otp
-
+from fastapi import HTTPException
 
 BASE_URL = os.getenv("BASE_URL")
 PROFILE_DIR = os.getenv("PROFILE_DIR")
@@ -226,6 +226,7 @@ async def reject_worker(db: AsyncSession, worker_id: int):
 # ---------------- LIST ---------------- #
 
 
+
 async def list_workers(
     db: AsyncSession,
     page=1,
@@ -233,11 +234,11 @@ async def list_workers(
     search=None,
     sort_by="id",
     sort_order="desc",
-    service_category: ServiceCategoryEnum = None   #  NEW FILTER
+    service_category: str = None,
 ):
     query = select(Worker)
 
-    #  SEARCH
+    # 🔍 SEARCH
     if search:
         query = query.where(
             or_(
@@ -247,29 +248,39 @@ async def list_workers(
             )
         )
 
-    #  FILTER (NEW)
+    # ✅ SERVICE CATEGORY FILTER (FIXED)
     if service_category:
-        query = query.where(Worker.service_category == service_category)
+        try:
+            enum_value = ServiceCategoryEnum(service_category.lower())
+            query = query.where(Worker.service_category == enum_value)
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid service_category. Allowed: {[e.value for e in ServiceCategoryEnum]}"
+            )
 
-    #  SORTING
+    # 🔽 SORTING
     sort_column = getattr(Worker, sort_by, Worker.id)
     query = query.order_by(
         asc(sort_column) if sort_order == "asc" else desc(sort_column)
     )
 
+    # ✅ TOTAL COUNT (BEFORE PAGINATION)
+    total_query = select(func.count()).select_from(query.subquery())
+    total = await db.scalar(total_query)
+
+    # ✅ PAGINATION (DB LEVEL)
+    query = query.offset((page - 1) * size).limit(size)
+
     result = await db.execute(query)
     workers = result.scalars().all()
 
-    total = len(workers)
-
-    start = (page - 1) * size
-    end = start + size
-
+    # ✅ RETURN ALL FIELDS
     return {
         "page": page,
         "size": size,
         "total": total,
-        "data": [format_worker(w) for w in workers[start:end]],
+        "data": [worker_to_dict(w) for w in workers],
     }
 
 
@@ -387,3 +398,53 @@ async def reset_worker_password(
 async def get_worker_by_id(worker_id: int, db):
     result = await db.execute(select(Worker).where(Worker.id == worker_id))
     return result.scalar_one_or_none()
+
+
+def worker_to_dict(w):
+    return {
+        "id": w.id,
+        "full_name": w.full_name,
+        "phone": w.phone,
+        "email": w.email,
+        "phone_verified": w.phone_verified,
+        "profile_image": w.profile_image,
+
+        "aadhaar_number": w.aadhaar_number,
+        "aadhaar_front": w.aadhaar_front,
+        "aadhaar_back": w.aadhaar_back,
+        "aadhaar_client_id": w.aadhaar_client_id,
+        "is_kyc_verified": w.is_kyc_verified,
+
+        "account_holder_name": w.account_holder_name,
+        "account_number": w.account_number,
+        "ifsc_code": w.ifsc_code,
+        "bank_name": w.bank_name,
+        "is_bank_verified": w.is_bank_verified,
+
+        "address": w.address,
+        "city": w.city,
+        "state": w.state,
+        "pincode": w.pincode,
+        "is_address_verified": w.is_address_verified,
+
+        "is_admin_approved": w.is_admin_approved,
+        "status": w.status.value if w.status else None,
+
+        "worker_type": w.worker_type.value if w.worker_type else None,
+        "vehicle_type": w.vehicle_type.value if w.vehicle_type else None,
+        "availability": w.availability.value if w.availability else None,
+
+        "employment_type": w.employment_type,
+        "service_category": w.service_category.value if w.service_category else None,
+
+        "rating": w.rating,
+
+        "latitude": w.latitude,
+        "longitude": w.longitude,
+
+        "device_id": w.device_id,
+        "is_logged_in": w.is_logged_in,
+
+        "created_at": w.created_at,
+        "is_banned": w.is_banned,
+    }

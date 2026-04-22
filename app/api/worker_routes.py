@@ -91,7 +91,7 @@ async def list_workers(
     search: str = None,
     sort_by: str = "id",
     sort_order: str = "desc",
-    service_category: ServiceCategoryEnum = None,  # 👈 NEW PARAM
+    service_category: str = None,   # ✅ changed to string
     db: AsyncSession = Depends(get_db),
 ):
     return await worker_service.list_workers(
@@ -101,7 +101,7 @@ async def list_workers(
         search,
         sort_by,
         sort_order,
-        service_category,  # 👈 PASS IT
+        service_category,
     )
 
 

@@ -22,7 +22,7 @@ class ServiceCategoryEnum(enum.Enum):
     PET_CARE = "pet_care"
     ELDER_CARE = "elder_care"
     PREGNANCY_CARE = "pregnancy_care"
-    KITCHEN_SERVICE = "kitchen_service"
+    KITCHEN_CARE = "kitchen_care"
 
 
 class WorkerTypeEnum(enum.Enum):
