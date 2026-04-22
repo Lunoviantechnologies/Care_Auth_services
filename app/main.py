@@ -9,7 +9,7 @@ from app.api.complaint_router import router as complaint_router
 from app.api.service_router import router as service_router
 # Import models (IMPORTANT: ensures tables are registered)
 from app.db.models import admin_model, customer_model, worker_model
-
+from app.db.models import service_model
 # Import routers
 from app.api import auth_routes, admin_routes, worker_routes, customer_routes
 from app.api.contact_controller import router as contact_router
@@ -36,16 +36,6 @@ async def create_tables() -> None:
         await conn.run_sync(Base.metadata.create_all)
         # 🔁 run_sync executes sync code (create_all) inside async
 
-
-# ---------------- STARTUP EVENT ----------------
-# 🔥 FastAPI will call this when server starts
-@app.on_event("startup")
-async def startup() -> None:
-    """
-    Startup event runs in async event loop.
-    Used for DB initialization, connections, etc.
-    """
-    await create_tables()  # ✅ awaited async function
 
 
 # ---------------- CORS MIDDLEWARE ----------------
@@ -77,13 +67,21 @@ def root() -> dict:
 
 @app.on_event("startup")
 async def startup():
-    # ✅ Step 1: Create tables FIRST
+
+    # ✅ Import models (force registration)
+    from app.db.models import service_model
+
+    # ✅ Create tables
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
-    # ✅ Step 2: Seed AFTER tables exist
+    print("✅ Tables created")
+
+    # ✅ Seed AFTER table exists
     async with AsyncSessionLocal() as db:
         await seed_services(db)
+
+    print("✅ Services seeded")
 
 
 # ---------------- ROUTES ----------------
